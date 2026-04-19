@@ -85,13 +85,18 @@ def tici_setup_fixture(request, openpilot_function_fixture):
 @pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(config, items):
   skipper = pytest.mark.skip(reason="Skipping tici test on PC")
+  # Precompute once outside the loop for efficiency
+  not_tici = not TICI
+  is_tici = TICI
+  # First pass: handle tici items
   for item in items:
     if "tici" in item.keywords:
-      if not TICI:
+      if not_tici:
         item.add_marker(skipper)
-      else:
+      elif is_tici:
         item.fixturenames.append('tici_setup_fixture')
-
+  # Second pass: handle xdist_group_class_property items
+  for item in items:
     if "xdist_group_class_property" in item.keywords:
       class_property_name = item.get_closest_marker('xdist_group_class_property').args[0]
       class_property_value = getattr(item.cls, class_property_name)
