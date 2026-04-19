@@ -10,7 +10,12 @@ from openpilot.selfdrive.modeld.constants import ModelConstants
 if __name__ == '__main__':  # generating code
   from openpilot.third_party.acados.acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 else:
-  from openpilot.selfdrive.controls.lib.lateral_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython
+  try:
+    from openpilot.selfdrive.controls.lib.lateral_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython
+  except ModuleNotFoundError:
+    class AcadosOcpSolverCython:  # collection fallback when generated code is absent
+      def __init__(self, *args, **kwargs):
+        raise ModuleNotFoundError("missing lateral MPC generated code")
 
 LAT_MPC_DIR = os.path.dirname(os.path.abspath(__file__))
 EXPORT_DIR = os.path.join(LAT_MPC_DIR, "c_generated_code")

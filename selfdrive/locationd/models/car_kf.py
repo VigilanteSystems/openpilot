@@ -15,7 +15,10 @@ if __name__ == '__main__':  # Generating sympy
   import sympy as sp
   from rednose.helpers.ekf_sym import gen_code
 else:
-  from rednose.helpers.ekf_sym_pyx import EKF_sym_pyx
+  try:
+    from rednose.helpers.ekf_sym_pyx import EKF_sym_pyx
+  except ModuleNotFoundError:
+    from rednose.helpers import EKF_sym_pyx
 
 
 i = 0

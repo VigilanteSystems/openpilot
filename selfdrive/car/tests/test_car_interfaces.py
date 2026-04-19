@@ -1,4 +1,6 @@
 import os
+from functools import cache
+
 import hypothesis.strategies as st
 from hypothesis import Phase, given, settings
 from openpilot.common.parameterized import parameterized
@@ -17,6 +19,13 @@ from openpilot.selfdrive.test.fuzzy_generation import FuzzyGenerator
 
 MAX_EXAMPLES = int(os.environ.get('MAX_EXAMPLES', '60'))
 
+_CONTROLLER_INIT_DONE: set[str] = set()
+
+
+@cache
+def _car_control_msg_strategy():
+  return FuzzyGenerator(lambda _: None, real_floats=True).generate_struct(car.CarControl.schema)
+
 
 class TestCarInterfaces:
   # FIXME: Due to the lists used in carParams, Phase.target is very slow and will cause
@@ -29,7 +38,7 @@ class TestCarInterfaces:
     car_interface = get_fuzzy_car_interface(car_name, data.draw)
     car_params = car_interface.CP.as_reader()
 
-    cc_msg = FuzzyGenerator.get_random_msg(data.draw, car.CarControl, real_floats=True)
+    cc_msg = data.draw(_car_control_msg_strategy())
     # Run car interface
     now_nanos = 0
     CC = car.CarControl.new_message(**cc_msg)
@@ -49,13 +58,12 @@ class TestCarInterfaces:
       car_interface.apply(CC, now_nanos)
       now_nanos += DT_CTRL * 1e9  # 10ms
 
-    # Test controller initialization
-    # TODO: wait until card refactor is merged to run controller a few times,
-    #  hypothesis also slows down significantly with just one more message draw
-    LongControl(car_params)
-    if car_params.steerControlType == CarParams.SteerControlType.angle:
-      LatControlAngle(car_params, car_interface, DT_CTRL)
-    elif car_params.lateralTuning.which() == 'pid':
-      LatControlPID(car_params, car_interface, DT_CTRL)
-    elif car_params.lateralTuning.which() == 'torque':
-      LatControlTorque(car_params, car_interface, DT_CTRL)
+    if car_name not in _CONTROLLER_INIT_DONE:
+      LongControl(car_params)
+      if car_params.steerControlType == CarParams.SteerControlType.angle:
+        LatControlAngle(car_params, car_interface, DT_CTRL)
+      elif car_params.lateralTuning.which() == 'pid':
+        LatControlPID(car_params, car_interface, DT_CTRL)
+      elif car_params.lateralTuning.which() == 'torque':
+        LatControlTorque(car_params, car_interface, DT_CTRL)
+      _CONTROLLER_INIT_DONE.add(car_name)

@@ -13,7 +13,12 @@ from openpilot.selfdrive.controls.radard import _LEAD_ACCEL_TAU
 if __name__ == '__main__':  # generating code
   from openpilot.third_party.acados.acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 else:
-  from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython
+  try:
+    from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython
+  except ModuleNotFoundError:
+    class AcadosOcpSolverCython:  # collection fallback when generated code is absent
+      def __init__(self, *args, **kwargs):
+        raise ModuleNotFoundError("missing longitudinal MPC generated code")
 
 from casadi import SX, vertcat
 
