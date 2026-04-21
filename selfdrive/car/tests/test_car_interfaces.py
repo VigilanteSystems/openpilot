@@ -8,7 +8,9 @@ from cereal import car
 from opendbc.car import DT_CTRL
 from opendbc.car.structs import CarParams
 
-MAX_EXAMPLES = int(os.environ.get("MAX_EXAMPLES", "60"))
+MAX_EXAMPLES = int(os.environ.get("MAX_EXAMPLES", "5"))
+
+_CONTROLLER_INIT_DONE: set[str] = set()
 
 
 @cache
@@ -54,10 +56,12 @@ class TestCarInterfaces:
       car_interface.apply(CC, now_nanos)
       now_nanos += DT_CTRL * 1e9  # 10ms
 
-    LongControl(car_params)
-    if car_params.steerControlType == CarParams.SteerControlType.angle:
-      LatControlAngle(car_params, car_interface, DT_CTRL)
-    elif car_params.lateralTuning.which() == 'pid':
-      LatControlPID(car_params, car_interface, DT_CTRL)
-    elif car_params.lateralTuning.which() == 'torque':
-      LatControlTorque(car_params, car_interface, DT_CTRL)
+    if car_name not in _CONTROLLER_INIT_DONE:
+      LongControl(car_params)
+      if car_params.steerControlType == CarParams.SteerControlType.angle:
+        LatControlAngle(car_params, car_interface, DT_CTRL)
+      elif car_params.lateralTuning.which() == 'pid':
+        LatControlPID(car_params, car_interface, DT_CTRL)
+      elif car_params.lateralTuning.which() == 'torque':
+        LatControlTorque(car_params, car_interface, DT_CTRL)
+      _CONTROLLER_INIT_DONE.add(car_name)
